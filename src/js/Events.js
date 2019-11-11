@@ -101,6 +101,7 @@ function getmover(mouse) {
             };
         }
     }
+    if (mov != undefined) { }
     console.log("Moving " + (mov ? mov.name : "nothing"));
     if (mov === null)
         return null;
@@ -203,6 +204,7 @@ function setuplisteners(canvas, data) {
             if (!cscompiled.keytyped) {
                 // this must bubble in order to trigger a keypress event
                 e.preventDefault();
+
             }
         });
         addAutoCleaningEventListener(canvas, "keyup", function(e) {
@@ -226,6 +228,7 @@ function setuplisteners(canvas, data) {
         manage("mousedown");
         mouse.down = true;
         e.preventDefault();
+
     });
 
     addAutoCleaningEventListener(canvas, "mouseup", function(e) {
@@ -237,6 +240,7 @@ function setuplisteners(canvas, data) {
         delete multipos[0];
         scheduleUpdate();
         e.preventDefault();
+
     });
 
     addAutoCleaningEventListener(canvas, "mousemove", function(e) {
@@ -253,6 +257,7 @@ function setuplisteners(canvas, data) {
         }
         manage("mousemove");
         e.preventDefault();
+
     });
 
     addAutoCleaningEventListener(canvas, "click", function(e) {
@@ -260,18 +265,23 @@ function setuplisteners(canvas, data) {
         if (!hasmoved)
             cs_mouseclick();
         e.preventDefault();
+
     });
 
     addAutoCleaningEventListener(canvas, "dragenter", function(e) {
         e.preventDefault();
+
+
     });
 
     addAutoCleaningEventListener(canvas, "dragover", function(e) {
         e.preventDefault();
+
     });
 
     addAutoCleaningEventListener(canvas, "drop", function(e) {
         e.preventDefault();
+
 
         // get data
         var dt = e.dataTransfer;
@@ -477,6 +487,8 @@ function setuplisteners(canvas, data) {
         manage("mousemove");
 
         e.preventDefault();
+
+
     }
     var activeTouchID = -1;
 
@@ -506,6 +518,7 @@ function setuplisteners(canvas, data) {
         //move = getmover(mouse);
         manage("mousedown");
         e.preventDefault();
+
     }
 
     function touchUp(e) {

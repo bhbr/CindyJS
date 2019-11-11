@@ -156,6 +156,7 @@ var csmouse, csctx, csw, csh, csgeo, images, dropped = nada,
 
 function canvasWithContainingDiv(elt) {
     var div;
+    console.log(elt);
     if (elt.tagName.toLowerCase() !== "canvas") {
         // we have a div or something like that, nest a canvas inside that
         div = elt;
