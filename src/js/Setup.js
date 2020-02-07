@@ -50,6 +50,7 @@ var csgridsize = 0;
 var cstgrid = 0;
 var csgridscript;
 var cssnap = false;
+var cssnapDistance = 0.2;
 var csaxes = false;
 
 //virtual resolution
@@ -269,6 +270,8 @@ function createCindyNow() {
                 cstgrid = port.tgrid;
             if (port.snap)
                 cssnap = true;
+            if (Number.isFinite(port.snapdistance))
+                cssnapDistance = Math.max(port.snapdistance, 0);
             if (port.axes)
                 csaxes = true;
         }
@@ -360,6 +363,9 @@ function createCindyNow() {
     }
     if (data.snap) {
         cssnap = true;
+    }
+    if (Number.isFinite(data.snapdistance)) {
+        cssnapDistance = Math.max(data.snapdistance, 0);
     }
 
     csgeo = {};
