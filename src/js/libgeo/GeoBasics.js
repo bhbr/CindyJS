@@ -1,3 +1,28 @@
+import { instanceInvocationArguments, nada, window } from "expose";
+import { csgeo } from "Setup";
+import { CSNumber } from "libcs/CSNumber";
+import { List } from "libcs/List";
+import { General } from "libcs/General";
+import {
+    assert,
+    movepointscr,
+    stateLastGood,
+    stateAlloc,
+    stateIn,
+    stateOut,
+    tracingInitial,
+    stateInIdx,
+    stateOutIdx,
+    stateArrays,
+    setTracingInitial,
+    setStateIn,
+    setStateOut,
+    setStateInIdx,
+    setStateOutIdx,
+} from "libgeo/Tracing";
+import { checkConjectures, guessDuplicate, guessIncidences } from "libgeo/Prover";
+import { geoOps, geoAliases, geoMacros } from "libgeo/GeoOps";
+
 var defaultAppearance = {};
 defaultAppearance.clip = "none";
 defaultAppearance.pointColor = [1, 0, 0];
@@ -23,22 +48,16 @@ defaultAppearance.lineHeight = 1.45;
 
 function setDefaultAppearance(obj) {
     var key;
-    for (key in obj)
-        if (obj[key] !== null)
-            defaultAppearance[key] = obj[key];
+    for (key in obj) if (obj[key] !== null) defaultAppearance[key] = obj[key];
 }
-if (instanceInvocationArguments.defaultAppearance)
-    setDefaultAppearance(instanceInvocationArguments.defaultAppearance);
+if (instanceInvocationArguments.defaultAppearance) setDefaultAppearance(instanceInvocationArguments.defaultAppearance);
 
 function csinit(gslp) {
-
     // establish defaults for geoOps
-    Object.keys(geoOps).forEach(function(opName) {
+    Object.keys(geoOps).forEach(function (opName) {
         var op = geoOps[opName];
-        assert(op.signature || opName === "_helper",
-            opName + " has no signature");
-        if (op.updatePosition !== undefined && op.stateSize === undefined)
-            op.stateSize = 0;
+        assert(op.signature || opName === "_helper", opName + " has no signature");
+        if (op.updatePosition !== undefined && op.stateSize === undefined) op.stateSize = 0;
     });
 
     //Main Data:
@@ -68,9 +87,9 @@ function csinit(gslp) {
 
     // sets
     csgeo.sets = {
-        "points": [],
-        "lines": [],
-        "conics": []
+        points: [],
+        lines: [],
+        conics: [],
     };
 
     gslp.forEach(addElementNoProof);
@@ -89,7 +108,6 @@ function setupTraceDrawing(el) {
 }
 
 function pointDefault(el) {
-
     if (el.size === undefined) el.size = defaultAppearance.pointSize;
     el.size = CSNumber.real(el.size);
     if (!el.movable || el.pinned) {
@@ -101,10 +119,10 @@ function pointDefault(el) {
     if (el.alpha === undefined) el.alpha = defaultAppearance.alpha;
     el.alpha = CSNumber.real(el.alpha);
 
-    if (typeof(el.noborder) !== 'boolean') el.noborder = defaultAppearance.noborder;
+    if (typeof el.noborder !== "boolean") el.noborder = defaultAppearance.noborder;
     el.noborder = General.bool(el.noborder);
 
-    if (typeof(el.border) !== 'boolean') el.border = !(defaultAppearance.noborder);
+    if (typeof el.border !== "boolean") el.border = !defaultAppearance.noborder;
     el.border = General.bool(el.border);
 
     if (el.drawtrace) {
@@ -119,26 +137,18 @@ function lineDefault(el) {
     if (el.alpha === undefined) el.alpha = defaultAppearance.alpha;
     el.alpha = CSNumber.real(el.alpha);
     el.clip = General.string(el.clip || defaultAppearance.clip);
-    if (el.overhang === undefined)
-        el.overhang = defaultAppearance.overhangLine;
+    if (el.overhang === undefined) el.overhang = defaultAppearance.overhangLine;
     el.overhang = CSNumber.real(el.overhang);
-    if (el.dashtype)
-        el.dashtype = General.wrap(el.dashtype);
+    if (el.dashtype) el.dashtype = General.wrap(el.dashtype);
 }
 
 function segmentDefault(el) {
-    if (el.overhang === undefined)
-        el.overhang = defaultAppearance.overhangSeg;
-    if (el.arrow)
-        el.arrow = General.bool(el.arrow);
-    if (el.arrowsize)
-        el.arrowsize = CSNumber.real(el.arrowsize);
-    if (el.arrowposition)
-        el.arrowposition = CSNumber.real(el.arrowposition);
-    if (el.arrowshape)
-        el.arrowshape = General.string(el.arrowshape);
-    if (el.arrowsides)
-        el.arrowsides = General.string(el.arrowsides);
+    if (el.overhang === undefined) el.overhang = defaultAppearance.overhangSeg;
+    if (el.arrow) el.arrow = General.bool(el.arrow);
+    if (el.arrowsize) el.arrowsize = CSNumber.real(el.arrowsize);
+    if (el.arrowposition) el.arrowposition = CSNumber.real(el.arrowposition);
+    if (el.arrowshape) el.arrowshape = General.string(el.arrowshape);
+    if (el.arrowsides) el.arrowsides = General.string(el.arrowsides);
     lineDefault(el);
     el.clip = General.string("end");
 }
@@ -146,13 +156,13 @@ function segmentDefault(el) {
 function textDefault(el) {
     var size;
     if (el.textsize !== undefined) el.size = el.textsize;
-    else if (el.size !== undefined) el.size = el.size;
+    //else if (el.size !== undefined) el.size = el.size;
     else el.size = defaultAppearance.textsize;
     el.size = CSNumber.real(+el.size);
 }
 
 function polygonDefault(el) {
-    el.filled = (el.filled !== undefined ? General.bool(el.filled) : General.bool(true));
+    el.filled = el.filled !== undefined ? General.bool(el.filled) : General.bool(true);
     if (el.fillcolor === undefined) el.fillcolor = nada;
     else el.fillcolor = List.realVector(el.fillcolor);
     if (el.fillalpha === undefined) el.fillalpha = 0;
@@ -166,9 +176,11 @@ function addElement(el, removeDuplicates) {
     checkConjectures();
 
     // remove element if it's a proven duplicate
-    if (typeof removeDuplicates === 'boolean' && removeDuplicates && el.Duplicate) {
+    if (typeof removeDuplicates === "boolean" && removeDuplicates && el.Duplicate) {
         var dup = el.Duplicate;
-        console.log("duplication detected: removing " + el.name + " (type " + el.kind + ") (duplicate of " + dup.name + ").");
+        console.log(
+            "duplication detected: removing " + el.name + " (type " + el.kind + ") (duplicate of " + dup.name + ")."
+        );
         removeElement(el.name);
         return dup;
     }
@@ -184,8 +196,7 @@ function addElementNoProof(el) {
         console.log("Element name '" + el.name + "' already exists");
 
         var existingEl = csgeo.csnames[el.name];
-        if (geoOps[existingEl.type].isMovable &&
-            geoOps[existingEl.type].kind === "P")
+        if (geoOps[existingEl.type].isMovable && geoOps[existingEl.type].kind === "P")
             movepointscr(existingEl, el.pos, "homog");
 
         return existingEl;
@@ -210,7 +221,7 @@ function addElementNoProof(el) {
     // Detect unsupported operations or missing or incorrect arguments
     var op = geoOps[el.type];
     var isSet = false;
-    var getKind = function(name) {
+    var getKind = function (name) {
         return csgeo.csnames[name].kind;
     };
 
@@ -223,43 +234,48 @@ function addElementNoProof(el) {
         // check for sets
         if (!Array.isArray(op.signature) && op.signature.charAt(1) === "*") {
             isSet = true;
-            el.args.forEach(function(val) {
+            el.args.forEach(function (val) {
                 if (csgeo.csnames[val].kind !== op.signature.charAt(0)) {
                     console.error(
                         "Not all elements in set are of same type: " +
-                        el.name + " expects " + op.signature +
-                        " but " + val + " is of kind " +
-                        csgeo.csnames[val].kind);
+                            el.name +
+                            " expects " +
+                            op.signature +
+                            " but " +
+                            val +
+                            " is of kind " +
+                            csgeo.csnames[val].kind
+                    );
                     if (typeof window !== "undefined")
                         window.alert("Not all elements in set are of same type: " + el.name);
                     return null;
                 }
             });
         } else if (op.signature.length !== (el.args ? el.args.length : 0)) {
-            console.error(
-                "Wrong number of arguments for " + el.name +
-                " of type " + el.type);
-            if (typeof window !== "undefined")
-                window.alert("Wrong number of arguments for " + el.name);
+            console.error("Wrong number of arguments for " + el.name + " of type " + el.type);
+            if (typeof window !== "undefined") window.alert("Wrong number of arguments for " + el.name);
             return null;
         }
     }
     if (el.args) {
         for (i = 0; i < el.args.length; ++i) {
             if (!csgeo.csnames.hasOwnProperty(el.args[i])) {
-                console.log(
-                    "Dropping " + el.name +
-                    " due to missing argument " + el.args[i]);
+                console.log("Dropping " + el.name + " due to missing argument " + el.args[i]);
                 return null;
             }
             if (op.signature !== "**" && !isSet) {
                 var argKind = csgeo.csnames[el.args[i]].kind;
-                if (!(op.signature[i] === argKind || (argKind === "S" &&
-                        op.signature[i] ===
-                        "L"))) {
-                    window.alert("Wrong argument kind " + argKind +
-                        " as argument " + i + " to element " +
-                        el.name + " of type " + el.type);
+                if (!(op.signature[i] === argKind || (argKind === "S" && op.signature[i] === "L"))) {
+                    window.alert(
+                        "Wrong argument kind " +
+                            argKind +
+                            " as argument " +
+                            i +
+                            " to element " +
+                            el.name +
+                            " of type " +
+                            el.type
+                    );
                     return null;
                 }
             }
@@ -317,10 +333,10 @@ function addElementNoProof(el) {
 
     if (setsRe.test(el.kind)) {
         var nameMap = {
-            "P": "points",
-            "L": "lines",
-            "S": "lines",
-            "C": "conics"
+            P: "points",
+            L: "lines",
+            S: "lines",
+            C: "conics",
         };
         var name = nameMap[el.kind[0]];
         csgeo.sets[name].push(el);
@@ -328,26 +344,26 @@ function addElementNoProof(el) {
 
     if (true || op.stateSize !== 0) {
         stateAlloc(totalStateSize);
-        stateIn = stateOut = stateLastGood;
+        setStateOut(stateLastGood);
+        setStateIn(stateLastGood);
         // initially, stateIn and stateOut are the same, so that initialize can
         // write some state and updatePosition can immediately use it
-        tracingInitial = true;
+        setTracingInitial(true);
         if (op.initialize) {
-            stateInIdx = stateOutIdx = el.stateIdx;
+            setStateOutIdx(el.stateIdx);
+            setStateInIdx(el.stateIdx);
             el.param = op.initialize(el);
-            assert(stateOutIdx === el.stateIdx + op.stateSize,
-                "State fully initialized");
+            assert(stateOutIdx === el.stateIdx + op.stateSize, "State fully initialized");
         }
-        stateInIdx = stateOutIdx = el.stateIdx;
+        setStateOutIdx(el.stateIdx);
+        setStateInIdx(el.stateIdx);
         op.updatePosition(el, false);
-        assert(stateInIdx === el.stateIdx + op.stateSize,
-            "State fully consumed");
-        assert(stateOutIdx === el.stateIdx + op.stateSize,
-            "State fully updated");
-        tracingInitial = false;
-        stateIn = stateArrays.in;
+        assert(stateInIdx === el.stateIdx + op.stateSize, "State fully consumed");
+        assert(stateOutIdx === el.stateIdx + op.stateSize, "State fully updated");
+        setTracingInitial(false);
+        setStateIn(stateArrays.in);
         stateIn.set(stateLastGood);
-        stateOut = stateArrays.out;
+        setStateOut(stateArrays.out);
     } else {
         // Do the updatePosition call with correct state handling around it.
     }
@@ -375,12 +391,12 @@ function removeElement(name) {
     // build dependency tree
     var depTree = {};
     var cskeys = Object.keys(csgeo.csnames);
-    cskeys.forEach(function(name) {
+    cskeys.forEach(function (name) {
         var el = csgeo.csnames[name];
         if (!el.hasOwnProperty("args")) return;
         var args = el.args;
 
-        args.forEach(function(argn) {
+        args.forEach(function (argn) {
             if (!depTree.hasOwnProperty(argn)) {
                 depTree[argn] = {};
             }
@@ -389,7 +405,7 @@ function removeElement(name) {
     });
 
     // recursively find all dependencies
-    var recFind = function(elname, map) {
+    var recFind = function (elname, map) {
         map[elname] = true;
         if (!depTree.hasOwnProperty(elname)) return map;
 
@@ -406,17 +422,17 @@ function removeElement(name) {
     var delArr = recFind(name, {});
 
     removeAllElements(delArr);
-
 }
 
 function removeAllElements(nameMap) {
-    var i, el, debug = false;
+    var i,
+        el,
+        debug = false;
     var keys = Object.keys(nameMap);
     if (debug) console.log("Remove elements: " + String(keys));
 
-
-    var nameCmp = function(cmpMap, arrn) {
-        return function(setel) {
+    var nameCmp = function (cmpMap, arrn) {
+        return function (setel) {
             if (cmpMap[setel.name]) {
                 if (debug) console.log("Removed element " + setel.name + " from " + arrn);
                 return false;
@@ -426,13 +442,13 @@ function removeAllElements(nameMap) {
 
     // update incidences
     var isFiltered = {}; // track filtered arrays
-    keys.forEach(function(name) {
+    keys.forEach(function (name) {
         var allIncis = csgeo.csnames[name].incidences;
-        allIncis.forEach(function(iname) {
+        allIncis.forEach(function (iname) {
             if (isFiltered[iname]) return;
             var incis = csgeo.csnames[iname].incidences;
-            csgeo.csnames[iname].incidences = incis.filter(function(n) {
-                return !(nameMap[n]);
+            csgeo.csnames[iname].incidences = incis.filter(function (n) {
+                return !nameMap[n];
             });
             isFiltered[iname] = true;
         });
@@ -440,7 +456,7 @@ function removeAllElements(nameMap) {
 
     // process GeoArrays
     var geoArrs = ["conics", "free", "gslp", "ifs", "lines", "points", "polygons", "texts"];
-    geoArrs.map(function(arrn) {
+    geoArrs.map(function (arrn) {
         csgeo[arrn] = csgeo[arrn].filter(nameCmp(nameMap, arrn));
     });
 
@@ -449,15 +465,15 @@ function removeAllElements(nameMap) {
         csgeo.sets[sname] = csgeo.sets[sname].filter(nameCmp(nameMap, "set of " + sname));
     }
 
-
-    keys.forEach(function(name) {
+    keys.forEach(function (name) {
         delete csgeo.csnames[name];
     });
 
     geoDependantsCache = {};
 }
 
-function onSegment(p, s) { //TODO was ist mit Fernpunkten
+function onSegment(p, s) {
+    //TODO was ist mit Fernpunkten
     // TODO das ist eine sehr teure implementiereung
     // Geht das einfacher?
     var el1 = csgeo.csnames[s.args[0]].homog;
@@ -471,12 +487,14 @@ function onSegment(p, s) { //TODO was ist mit Fernpunkten
     var xm = CSNumber.div(elm.value[0], elm.value[2]);
     var ym = CSNumber.div(elm.value[1], elm.value[2]);
 
-    if (CSNumber._helper.isAlmostReal(x1) &&
+    if (
+        CSNumber._helper.isAlmostReal(x1) &&
         CSNumber._helper.isAlmostReal(y1) &&
         CSNumber._helper.isAlmostReal(x2) &&
         CSNumber._helper.isAlmostReal(y2) &&
         CSNumber._helper.isAlmostReal(xm) &&
-        CSNumber._helper.isAlmostReal(ym)) {
+        CSNumber._helper.isAlmostReal(ym)
+    ) {
         x1 = x1.value.real;
         y1 = y1.value.real;
         x2 = x2.value.real;
@@ -488,10 +506,8 @@ function onSegment(p, s) { //TODO was ist mit Fernpunkten
         var d2m = Math.sqrt((x2 - xm) * (x2 - xm) + (y2 - ym) * (y2 - ym));
         var dd = d12 - d1m - d2m;
         return dd * dd < 0.000000000000001;
-
     }
     return false;
-
 }
 
 function isShowing(el, op) {
@@ -515,7 +531,6 @@ function isShowing(el, op) {
     if (op.visiblecheck) {
         op.visiblecheck(el);
     }
-
 }
 
 var geoDependantsCache = {};
@@ -547,3 +562,19 @@ function getGeoDependants(mover) {
     */
     return deps;
 }
+
+export {
+    csinit,
+    setupTraceDrawing,
+    defaultAppearance,
+    addElement,
+    removeElement,
+    onSegment,
+    pointDefault,
+    lineDefault,
+    segmentDefault,
+    textDefault,
+    polygonDefault,
+    getGeoDependants,
+    isShowing,
+};

@@ -110,8 +110,12 @@ fwdtargets = \
 	cindy3d-dbg \
 	cindygl \
 	cindygl-dbg \
+	cindyprint \
+	cindyleap \
+	cindyxr \
 	ComplexCurves \
 	deploy \
+	eslint \
 	forbidden \
 	jshint \
 	katex \

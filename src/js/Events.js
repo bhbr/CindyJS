@@ -1,5 +1,45 @@
+import {
+    csgeo,
+    shutdownHooks,
+    shutdown,
+    csmouse,
+    cscompiled,
+    loadImage,
+    updateCanvasDimensions,
+    isShutDown,
+    csanimating,
+    csctx,
+    csw,
+    csh,
+    csgridsize,
+    csaxes,
+    cstgrid,
+    simcap,
+    simtick,
+    simspeed,
+    simfactor,
+    simtime,
+    setSimTime,
+    setDropped,
+    setDropPoint,
+} from "Setup";
+import { document, nada, window, instanceInvocationArguments } from "expose";
+import { CSNumber } from "libcs/CSNumber";
+import { List } from "libcs/List";
+import { General } from "libcs/General";
+import { evaluate } from "libcs/Evaluator";
+import { manage } from "libcs/Tools";
+import { csport } from "libgeo/GeoState";
+import { draw_traces, render } from "libgeo/GeoRender";
+import { traceMouseAndScripts } from "libgeo/Tracing";
+import { csPhysicsInited, lab } from "liblab/LabBasics";
+
 var mouse = {};
 var move;
+
+function setMove(mv) {
+    move = mv;
+}
 
 var cskey = "";
 var cskeycode = 0;
@@ -14,27 +54,23 @@ function getmover(mouse) {
     var diff;
     for (var i = 0; i < csgeo.free.length; i++) {
         var el = csgeo.free[i];
-        if (el.pinned || el.visible === false || el.tmp === true)
-            continue;
+        if (el.pinned || el.visible === false || el.tmp === true) continue;
 
         var dx, dy, dist, p;
         var sc = csport.drawingstate.matrix.sdet;
         if (el.kind === "P") {
             p = List.normalizeZ(el.homog);
-            if (!List._helper.isAlmostReal(p))
-                continue;
+            if (!List._helper.isAlmostReal(p)) continue;
             dx = p.value[0].value.real - mouse.x;
             dy = p.value[1].value.real - mouse.y;
             dist = Math.sqrt(dx * dx + dy * dy);
-            if (el.narrow && dist > (typeof el.narrow === "number" ?
-                    el.narrow : 20) / sc)
-                continue;
-        } else if (el.kind === "C") { //Must be CircleMr
+            if (el.narrow && dist > (typeof el.narrow === "number" ? el.narrow : 20) / sc) continue;
+        } else if (el.kind === "C") {
+            //Must be CircleMr
             var normalizedmid = List.normalizeZ(csgeo.csnames[el.args[0]].homog);
             var rad = el.radius;
 
-            if (!List._helper.isAlmostReal(normalizedmid) || !CSNumber._helper.isAlmostReal(rad))
-                continue;
+            if (!List._helper.isAlmostReal(normalizedmid) || !CSNumber._helper.isAlmostReal(rad)) continue;
 
             var midx = normalizedmid.value[0].value.real; //center of circle
             var midy = normalizedmid.value[1].value.real;
@@ -43,11 +79,10 @@ function getmover(mouse) {
             var vy = mouse.y - midy;
 
             var vlength = Math.sqrt(vx * vx + vy * vy);
-            if (vlength === 0)
-                continue;
+            if (vlength === 0) continue;
 
-            var refx = midx + vx / vlength * rad.value.real; //reference point: the to mouse projected on the circle
-            var refy = midy + vy / vlength * rad.value.real;
+            var refx = midx + (vx / vlength) * rad.value.real; //reference point: the to mouse projected on the circle
+            var refy = midy + (vy / vlength) * rad.value.real;
 
             dx = refx - mouse.x; //vector from mouse to reference point
             dy = refy - mouse.y;
@@ -56,15 +91,12 @@ function getmover(mouse) {
 
             dist = dist + 30 / sc;
 
-            if (el.narrow && dist > ((typeof el.narrow === "number" ?
-                    el.narrow : 20) + 30) / sc)
-                continue;
-
-        } else if (el.kind === "L") { //Must be ThroughPoint(Horizontal/Vertical not treated yet)
+            if (el.narrow && dist > ((typeof el.narrow === "number" ? el.narrow : 20) + 30) / sc) continue;
+        } else if (el.kind === "L") {
+            //Must be ThroughPoint(Horizontal/Vertical not treated yet)
             var l = el.homog;
             var N = CSNumber;
-            var nn = N.add(N.mult(l.value[0], N.conjugate(l.value[0])),
-                N.mult(l.value[1], N.conjugate(l.value[1])));
+            var nn = N.add(N.mult(l.value[0], N.conjugate(l.value[0])), N.mult(l.value[1], N.conjugate(l.value[1])));
             var ln = List.scaldiv(N.sqrt(nn), l);
             dist = ln.value[0].value.real * mouse.x + ln.value[1].value.real * mouse.y + ln.value[2].value.real;
             dx = -ln.value[0].value.real * dist;
@@ -80,70 +112,63 @@ function getmover(mouse) {
             dx = Math.max(0, p[0] - el._bbox.right, el._bbox.left - p[0]);
             dy = Math.max(0, p[1] - el._bbox.bottom, el._bbox.top - p[1]);
             dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 20)
-                continue;
+            if (dist > 20) continue;
             dist = dist / sc;
             p = List.normalizeZ(el.homog);
-            if (!List._helper.isAlmostReal(p))
-                continue;
+            if (!List._helper.isAlmostReal(p)) continue;
             dx = p.value[0].value.real - mouse.x;
             dy = p.value[1].value.real - mouse.y;
         } else {
             continue;
         }
 
-        if (dist < adist + 0.2 / sc) { //A bit a dirty hack, prefers new points
+        if (dist < adist + 0.2 / sc) {
+            //A bit a dirty hack, prefers new points
             adist = dist;
             mov = el;
             diff = {
                 x: dx,
-                y: dy
+                y: dy,
             };
         }
     }
     if (mov != undefined) { }
     console.log("Moving " + (mov ? mov.name : "nothing"));
-    if (mov === null)
-        return null;
+    if (mov === null) return null;
     return {
         mover: mov,
         offset: diff,
         prev: {
             x: mouse.x,
-            y: mouse.y
-        }
+            y: mouse.y,
+        },
     };
 }
 
 function addAutoCleaningEventListener(target, type, listener, useCapture) {
-    if (useCapture === undefined)
-        useCapture = false;
-    shutdownHooks.push(function() {
+    if (useCapture === undefined) useCapture = false;
+    shutdownHooks.push(function () {
         target.removeEventListener(type, listener, useCapture);
     });
     target.addEventListener(type, listener, useCapture);
 }
 
 function setuplisteners(canvas, data) {
-
     var MO = null;
     var mousedownevent = null;
     var hasmoved = false;
-    if (typeof MutationObserver !== "undefined")
-        MO = MutationObserver;
-    if (!MO && typeof WebKitMutationObserver !== "undefined")
-        MO = WebKitMutationObserver; // jshint ignore: line
+    if (typeof MutationObserver !== "undefined") MO = MutationObserver;
+    if (!MO && typeof WebKitMutationObserver !== "undefined") MO = WebKitMutationObserver;
     if (MO) {
-        MO = new MO(function(mutations) {
+        MO = new MO(function (mutations) {
             // Browsers which support MutationObserver likely support contains
-            if (!document.body.contains(canvas))
-                shutdown();
+            if (!document.body.contains(canvas)) shutdown();
         });
         MO.observe(document.documentElement, {
-            "childList": true,
-            "subtree": true
+            childList: true,
+            subtree: true,
         });
-        shutdownHooks.push(function() {
+        shutdownHooks.push(function () {
             MO.disconnect();
         });
     } else {
@@ -155,8 +180,7 @@ function setuplisteners(canvas, data) {
         for (let i = 0; i < event.changedTouches.length; i++) {
             let touch = event.changedTouches[i];
             let id = getmultiid(touch.identifier);
-            if (!initialize && !multipos[id])
-                continue;
+            if (!initialize && !multipos[id]) continue;
             var rect = canvas.getBoundingClientRect();
             var x = touch.clientX - rect.left - canvas.clientLeft + 0.5;
             var y = touch.clientY - rect.top - canvas.clientTop + 0.5;
@@ -181,25 +205,25 @@ function setuplisteners(canvas, data) {
     }
 
     if (data.keylistener === true) {
-        addAutoCleaningEventListener(document, "keydown", function(e) {
+        addAutoCleaningEventListener(document, "keydown", function (e) {
             cs_keydown(e);
             return false;
         });
-        addAutoCleaningEventListener(document, "keyup", function(e) {
+        addAutoCleaningEventListener(document, "keyup", function (e) {
             cs_keyup(e);
             return false;
         });
-        addAutoCleaningEventListener(document, "keypress", function(e) {
+        addAutoCleaningEventListener(document, "keypress", function (e) {
             cs_keytyped(e);
             return false;
         });
     } else if (cscompiled.keydown || cscompiled.keyup || cscompiled.keytyped) {
         canvas.setAttribute("tabindex", "0");
-        addAutoCleaningEventListener(canvas, "mousedown", function() {
+        addAutoCleaningEventListener(canvas, "mousedown", function () {
             canvas.focus();
         });
-        addAutoCleaningEventListener(canvas, "keydown", function(e) {
-            if (e.keyCode === 9 /* tab */ ) return;
+        addAutoCleaningEventListener(canvas, "keydown", function (e) {
+            if (e.keyCode === 9 /* tab */) return;
             cs_keydown(e);
             if (!cscompiled.keytyped) {
                 // this must bubble in order to trigger a keypress event
@@ -207,18 +231,18 @@ function setuplisteners(canvas, data) {
 
             }
         });
-        addAutoCleaningEventListener(canvas, "keyup", function(e) {
+        addAutoCleaningEventListener(canvas, "keyup", function (e) {
             cs_keyup(e);
             e.preventDefault();
         });
-        addAutoCleaningEventListener(canvas, "keypress", function(e) {
-            if (e.keyCode === 9 /* tab */ ) return;
+        addAutoCleaningEventListener(canvas, "keypress", function (e) {
+            if (e.keyCode === 9 /* tab */) return;
             cs_keytyped(e);
             e.preventDefault();
         });
     }
 
-    addAutoCleaningEventListener(canvas, "mousedown", function(e) {
+    addAutoCleaningEventListener(canvas, "mousedown", function (e) {
         mousedownevent = e;
         hasmoved = false;
         mouse.button = e.which;
@@ -231,7 +255,7 @@ function setuplisteners(canvas, data) {
 
     });
 
-    addAutoCleaningEventListener(canvas, "mouseup", function(e) {
+    addAutoCleaningEventListener(canvas, "mouseup", function (e) {
         mouse.down = false;
         cindy_cancelmove();
         cs_mouseup();
@@ -243,13 +267,18 @@ function setuplisteners(canvas, data) {
 
     });
 
-    addAutoCleaningEventListener(canvas, "mousemove", function(e) {
+    addAutoCleaningEventListener(canvas, "mousemove", function (e) {
         updatePosition(e);
-        if (mouse.down) { // this might be also a touchdown
-            if (mousedownevent && (Math.abs(mousedownevent.clientX - e.clientX) > 2 || Math.abs(mousedownevent.clientY - e.clientY) > 2))
+        if (mouse.down) {
+            // this might be also a touchdown
+            if (
+                mousedownevent &&
+                (Math.abs(mousedownevent.clientX - e.clientX) > 2 || Math.abs(mousedownevent.clientY - e.clientY) > 2)
+            )
                 hasmoved = true;
             cs_mousedrag();
-            if (multipos[0]) { //the physical mouse (not a finger acting as mouse) indeed is down
+            if (multipos[0]) {
+                //the physical mouse (not a finger acting as mouse) indeed is down
                 cs_multidrag(0);
             }
         } else {
@@ -260,26 +289,25 @@ function setuplisteners(canvas, data) {
 
     });
 
-    addAutoCleaningEventListener(canvas, "click", function(e) {
+    addAutoCleaningEventListener(canvas, "click", function (e) {
         updatePosition(e);
-        if (!hasmoved)
-            cs_mouseclick();
+        if (!hasmoved) cs_mouseclick();
         e.preventDefault();
 
     });
 
-    addAutoCleaningEventListener(canvas, "dragenter", function(e) {
+    addAutoCleaningEventListener(canvas, "dragenter", function (e) {
         e.preventDefault();
 
 
     });
 
-    addAutoCleaningEventListener(canvas, "dragover", function(e) {
+    addAutoCleaningEventListener(canvas, "dragover", function (e) {
         e.preventDefault();
 
     });
 
-    addAutoCleaningEventListener(canvas, "drop", function(e) {
+    addAutoCleaningEventListener(canvas, "drop", function (e) {
         e.preventDefault();
 
 
@@ -295,15 +323,15 @@ function setuplisteners(canvas, data) {
         var pos = List.realVector(csport.to(x, y));
 
         if (files.length > 0) {
-            Array.prototype.forEach.call(files, function(file, i) {
+            Array.prototype.forEach.call(files, function (file, i) {
                 var reader = new FileReader();
                 if (textType(file.type)) {
-                    reader.onload = function() {
+                    reader.onload = function () {
                         textDone(i, reader.result);
                     };
                     reader.readAsText(file);
-                } else if ((/^image\//).test(file.type)) {
-                    reader.onload = function() {
+                } else if (/^image\//.test(file.type)) {
+                    reader.onload = function () {
                         imgDone(i, reader.result);
                     };
                     reader.readAsDataURL(file);
@@ -315,7 +343,7 @@ function setuplisteners(canvas, data) {
         } else {
             var data = dt.getData("text/uri-list");
             if (data) {
-                data = data.split("\n").filter(function(line) {
+                data = data.split("\n").filter(function (line) {
                     return !/^\s*(#|$)/.test(line);
                 });
                 countDown = data.length;
@@ -330,7 +358,7 @@ function setuplisteners(canvas, data) {
             name = name.replace(/[^]*\/([^\/])/, "$1");
             files[i] = {
                 type: "",
-                name: name
+                name: name,
             };
             var req = new XMLHttpRequest();
             req.onreadystatechange = haveHead;
@@ -338,17 +366,15 @@ function setuplisteners(canvas, data) {
             req.send();
 
             function haveHead() {
-                if (req.readyState !== XMLHttpRequest.DONE)
-                    return;
+                if (req.readyState !== XMLHttpRequest.DONE) return;
                 if (req.status !== 200) {
-                    console.error("HEAD request for " + uri + " failed: " +
-                        (req.responseText || "(no error message)"));
+                    console.error("HEAD request for " + uri + " failed: " + (req.responseText || "(no error message)"));
                     oneDone(i, nada);
                     return;
                 }
                 var type = req.getResponseHeader("Content-Type");
                 files[i].type = type;
-                if ((/^image\//).test(type)) {
+                if (/^image\//.test(type)) {
                     imgDone(i, uri);
                 } else if (textType(type)) {
                     req = new XMLHttpRequest();
@@ -361,22 +387,19 @@ function setuplisteners(canvas, data) {
             }
 
             function haveText() {
-                if (req.readyState !== XMLHttpRequest.DONE)
-                    return;
+                if (req.readyState !== XMLHttpRequest.DONE) return;
                 if (req.status !== 200) {
-                    console.error("GET request for " + uri + " failed: " +
-                        (req.responseText || "(no error message)"));
+                    console.error("GET request for " + uri + " failed: " + (req.responseText || "(no error message)"));
                     oneDone(i, nada);
                     return;
                 }
                 textDone(i, req.responseText);
             }
-
         }
 
         function textType(type) {
             type = type.replace(/;[^]*/, "");
-            if ((/^text\//).test(type)) return 1;
+            if (/^text\//.test(type)) return 1;
             if (type === "application/json") return 2;
             return 0;
         }
@@ -406,14 +429,16 @@ function setuplisteners(canvas, data) {
         function imgDone(i, src) {
             var img = new Image();
             var reported = false;
-            img.onload = function() {
+            img.onload = function () {
                 if (reported) return;
                 reported = true;
-                oneDone(i,
+                oneDone(
+                    i,
 
-                    loadImage(img, false));
+                    loadImage(img, false)
+                );
             };
-            img.onerror = function(err) {
+            img.onerror = function (err) {
                 if (reported) return;
                 reported = true;
                 console.error(err);
@@ -436,8 +461,7 @@ function setuplisteners(canvas, data) {
     });
 
     function getmultiid(identifier) {
-        if (multiiddict.hasOwnProperty(identifier))
-            return multiiddict[identifier];
+        if (multiiddict.hasOwnProperty(identifier)) return multiiddict[identifier];
         let used = Object.values(multiiddict);
 
         //find the smallest integer >= 1 that is not already used in O(n log n)
@@ -450,11 +474,9 @@ function setuplisteners(canvas, data) {
                 isset = true;
             }
         }
-        if (!isset)
-            multiiddict[identifier] = used.length + 1;
+        if (!isset) multiiddict[identifier] = used.length + 1;
         return multiiddict[identifier];
     }
-
 
     function touchMove(e) {
         updateMultiPositions(e, false);
@@ -476,7 +498,11 @@ function setuplisteners(canvas, data) {
 
         updatePosition(e.targetTouches[0]);
         if (mouse.down) {
-            if (mousedownevent && (Math.abs(mousedownevent.clientX - e.targetTouches[0].clientX) > 2 || Math.abs(mousedownevent.clientY - e.targetTouches[0].clientY) > 2))
+            if (
+                mousedownevent &&
+                (Math.abs(mousedownevent.clientX - e.targetTouches[0].clientX) > 2 ||
+                    Math.abs(mousedownevent.clientY - e.targetTouches[0].clientY) > 2)
+            )
                 hasmoved = true;
             multiid = getmultiid(activeTouchID);
             cs_mousedrag();
@@ -508,7 +534,6 @@ function setuplisteners(canvas, data) {
             return;
         }
         activeTouchID = activeTouchIDList[0].identifier;
-
 
         updatePosition(e.targetTouches[0]);
         cs_mousedown();
@@ -545,8 +570,7 @@ function setuplisteners(canvas, data) {
         cindy_cancelmove();
         cs_mouseup();
         manage("mouseup");
-        if (!hasmoved)
-            cs_mouseclick();
+        if (!hasmoved) cs_mouseclick();
         scheduleUpdate();
         e.preventDefault();
     }
@@ -560,12 +584,17 @@ function setuplisteners(canvas, data) {
     }
 
     if (typeof window !== "undefined") {
-        addAutoCleaningEventListener(window, "resize", function() {
-            requestAnimFrame(function() {
-                updateCanvasDimensions();
-                scheduleUpdate();
-            });
-        }, false);
+        addAutoCleaningEventListener(
+            window,
+            "resize",
+            function () {
+                requestAnimFrame(function () {
+                    updateCanvasDimensions();
+                    scheduleUpdate();
+                });
+            },
+            false
+        );
     }
     resizeSensor(canvas.parentNode);
 
@@ -585,17 +614,14 @@ function mkdiv(parent, style) {
 function resizeSensor(element) {
     if (typeof document === "undefined") return;
     var styleChild = "position: absolute; transition: 0s; left: 0; top: 0;";
-    var style = styleChild + " right: 0; bottom: 0; overflow: hidden;" +
-        " z-index: -1; visibility: hidden;";
+    var style = styleChild + " right: 0; bottom: 0; overflow: hidden;" + " z-index: -1; visibility: hidden;";
     var expand = mkdiv(element, style);
-    var expandChild = mkdiv(
-        expand, styleChild + " width: 100000px; height: 100000px");
+    var expandChild = mkdiv(expand, styleChild + " width: 100000px; height: 100000px");
     var shrink = mkdiv(element, style);
     mkdiv(shrink, styleChild + " width: 200%; height: 200%");
 
     function reset() {
-        expand.scrollLeft = expand.scrollTop =
-            shrink.scrollLeft = shrink.scrollTop = 100000;
+        expand.scrollLeft = expand.scrollTop = shrink.scrollLeft = shrink.scrollTop = 100000;
     }
 
     reset();
@@ -609,7 +635,7 @@ function resizeSensor(element) {
             h = element.clientHeight;
             if (!scheduled) {
                 scheduled = true;
-                requestAnimFrame(function() {
+                requestAnimFrame(function () {
                     scheduled = false;
                     updateCanvasDimensions();
                     scheduleUpdate();
@@ -625,7 +651,7 @@ function resizeSensor(element) {
 
 var requestAnimFrame;
 if (instanceInvocationArguments.isNode) {
-    requestAnimFrame = process.nextTick; // jshint ignore:line
+    requestAnimFrame = process.nextTick;
 } else {
     requestAnimFrame =
         window.requestAnimationFrame ||
@@ -633,7 +659,7 @@ if (instanceInvocationArguments.isNode) {
         window.mozRequestAnimationFrame ||
         window.oRequestAnimationFrame ||
         window.msRequestAnimationFrame ||
-        function(callback) {
+        function (callback) {
             window.setTimeout(callback, 0);
         };
 }
@@ -665,7 +691,8 @@ function updateCindy() {
     var m = csport.drawingstate.matrix;
     var d, a, b, i, p;
     // due to the csport.reset(), m is initial, i.e. a = d and b = c = 0
-    if (csgridsize !== 0) { // Square grid
+    if (csgridsize !== 0) {
+        // Square grid
         csctx.beginPath();
         csctx.strokeStyle = "rgba(0,0,0,0.1)";
         csctx.lineWidth = 1;
@@ -689,7 +716,8 @@ function updateCindy() {
         }
         csctx.stroke();
     }
-    if (cstgrid !== 0) { // Triangular grid
+    if (cstgrid !== 0) {
+        // Triangular grid
         csctx.beginPath();
         csctx.strokeStyle = "rgba(0,0,0,0.1)";
         csctx.lineWidth = 1;
@@ -789,8 +817,7 @@ function cs_mousedrag(e) {
 
 function cs_multidown(id) {
     multiid = id;
-    if (id === 0)
-        multipos[0] = csmouse;
+    if (id === 0) multipos[0] = csmouse;
     evaluate(cscompiled.multidown);
     multiid = 0;
 }
@@ -819,12 +846,12 @@ function cs_mouseclick(e) {
 function cs_tick(e) {
     var now = Date.now();
     var delta = Math.min(simcap, now - simtick) * simspeed * simfactor;
-    simtick = now;
+    setSimTime(now);
     var time = simtime + delta;
-    if (csPhysicsInited && typeof(lab) !== 'undefined') {
+    if (csPhysicsInited && typeof lab !== "undefined") {
         lab.tick(delta);
     }
-    simtime = time;
+    setSimTime(time);
     if (csanimating) {
         evaluate(cscompiled.tick);
     }
@@ -843,14 +870,35 @@ function cs_simulationstop(e) {
 }
 
 function cs_onDrop(lst, pos) {
-    dropped = List.turnIntoCSList(lst);
-    dropPoint = pos;
+    setDropped(List.turnIntoCSList(lst));
+    setDropPoint(pos);
     evaluate(cscompiled.ondrop);
-    dropped = nada;
-    dropPoint = nada;
+    setDropped(nada);
+    setDropPoint(nada);
     scheduleUpdate();
 }
 
 function cindy_cancelmove() {
     move = undefined;
 }
+
+export {
+    scheduleUpdate,
+    addAutoCleaningEventListener,
+    setuplisteners,
+    cs_simulationstart,
+    cs_simulationstop,
+    cskey,
+    cskeycode,
+    multipos,
+    move,
+    multiid,
+    updateCindy,
+    mouse,
+    getmover,
+    cs_keydown,
+    cs_keyup,
+    cs_keytyped,
+    cs_simulationstep,
+    setMove,
+};

@@ -1,10 +1,21 @@
+import { csgeo } from "Setup";
+import { nada } from "expose";
+import { CSNumber } from "libcs/CSNumber";
+import { List } from "libcs/List";
+import { General } from "libcs/General";
+import { niceprint } from "libcs/Essentials";
+import { setupTraceDrawing } from "libgeo/GeoBasics";
+import { movepointscr } from "libgeo/Tracing";
+import { geoOps } from "libgeo/GeoOps";
+
 //*************************************************************
 // and here are the accessors for properties and elements
 //*************************************************************
 
 var Accessor = {};
 
-Accessor.generalFields = { // fieldname translation
+Accessor.generalFields = {
+    // fieldname translation
     color: "color",
     colorhsb: "",
     size: "size",
@@ -22,22 +33,21 @@ Accessor.generalFields = { // fieldname translation
     labelled: "labeled",
 };
 
-Accessor.getGeoField = function(geoname, field) {
-    if (typeof csgeo.csnames[geoname] !== 'undefined') {
+Accessor.getGeoField = function (geoname, field) {
+    if (typeof csgeo.csnames[geoname] !== "undefined") {
         return Accessor.getField(csgeo.csnames[geoname], field);
     }
     return nada;
 };
 
-
-Accessor.setGeoField = function(geoname, field, value) {
-    if (typeof csgeo.csnames[geoname] !== 'undefined') {
+Accessor.setGeoField = function (geoname, field, value) {
+    if (typeof csgeo.csnames[geoname] !== "undefined") {
         return Accessor.setField(csgeo.csnames[geoname], field, value);
     }
     return nada;
 };
 
-Accessor.getField = function(geo, field) {
+Accessor.getField = function (geo, field) {
     var erg;
     if (geo.kind === "P") {
         if (field === "xy") {
@@ -69,10 +79,8 @@ Accessor.getField = function(geo, field) {
             return General.withUsage(erg, "Angle");
         }
         if (field === "slope") {
-            return CSNumber.neg(CSNumber.div(
-                geo.homog.value[0], geo.homog.value[1]));
+            return CSNumber.neg(CSNumber.div(geo.homog.value[0], geo.homog.value[1]));
         }
-
     }
     if (geo.kind === "Tr") {
         if (field === "matrix") {
@@ -80,21 +88,19 @@ Accessor.getField = function(geo, field) {
         }
     }
     if (geo.kind === "C") {
-        if (field === "radius") { //Assumes that we have a circle
+        if (field === "radius") {
+            //Assumes that we have a circle
             var s = geo.matrix;
             var ax = s.value[0].value[0];
             var az = s.value[0].value[2];
             var bz = s.value[1].value[2];
             var cz = s.value[2].value[2];
 
-
             var n = CSNumber.mult(ax, ax);
             var aa = CSNumber.div(az, ax);
             var bb = CSNumber.div(bz, ax);
             var cc = CSNumber.div(cz, ax);
-            erg = CSNumber.sqrt(CSNumber.sub(CSNumber.add(CSNumber.mult(aa, aa),
-                    CSNumber.mult(bb, bb)),
-                cc));
+            erg = CSNumber.sqrt(CSNumber.sub(CSNumber.add(CSNumber.mult(aa, aa), CSNumber.mult(bb, bb)), cc));
 
             return erg;
         }
@@ -149,7 +155,8 @@ Accessor.getField = function(geo, field) {
     if (field === "pinned") {
         return General.bool(!!geo.pinned);
     }
-    if (Accessor.generalFields[field]) { //must be defined as an actual string
+    if (Accessor.generalFields[field]) {
+        //must be defined as an actual string
         erg = geo[Accessor.generalFields[field]];
         if (erg && erg.ctype) {
             return erg;
@@ -194,18 +201,15 @@ Accessor.getField = function(geo, field) {
         if (field === "ldiff" && geo.behavior.type === "Spring") {
             return CSNumber.real(geo.behavior.ldiff);
         }
-
     }
     var getter = geoOps[geo.type]["get_" + field];
     if (typeof getter === "function") {
         return getter(geo);
     }
     return nada;
-
-
 };
 
-Accessor.setField = function(geo, field, value) {
+Accessor.setField = function (geo, field, value) {
     var dir;
 
     if (field === "color" && List._helper.isNumberVecN(value, 3)) {
@@ -262,11 +266,19 @@ Accessor.setField = function(geo, field, value) {
         }
 
         if (field === "x" && value.ctype === "number") {
-            movepointscr(geo, List.turnIntoCSList([CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[1], geo.homog.value[2]]), "homog");
+            movepointscr(
+                geo,
+                List.turnIntoCSList([CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[1], geo.homog.value[2]]),
+                "homog"
+            );
         }
 
         if (field === "y" && value.ctype === "number") {
-            movepointscr(geo, List.turnIntoCSList([geo.homog.value[0], CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[2]]), "homog");
+            movepointscr(
+                geo,
+                List.turnIntoCSList([geo.homog.value[0], CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[2]]),
+                "homog"
+            );
         }
 
         if (field === "homog" && List._helper.isNumberVecN(value, 3)) {
@@ -282,7 +294,8 @@ Accessor.setField = function(geo, field, value) {
         if (field === "pressed" && value.ctype === "boolean" && geo.checkbox) {
             geo.checkbox.checked = value.value;
         }
-        if (geo.movable) { // Texts may move without tracing
+        if (geo.movable) {
+            // Texts may move without tracing
             if (field === "xy") {
                 if (List._helper.isNumberVecN(value, 2)) {
                     geo.homog = List.turnIntoCSList([value.value[0], value.value[1], CSNumber.real(1)]);
@@ -292,9 +305,17 @@ Accessor.setField = function(geo, field, value) {
             } else if (field === "homog" && List._helper.isNumberVecN(value, 3)) {
                 geo.homog = value;
             } else if (field === "x" && value.ctype === "number") {
-                geo.homog = List.turnIntoCSList([CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[1], geo.homog.value[2]]);
+                geo.homog = List.turnIntoCSList([
+                    CSNumber.mult(value, geo.homog.value[2]),
+                    geo.homog.value[1],
+                    geo.homog.value[2],
+                ]);
             } else if (field === "y" && value.ctype === "number") {
-                geo.homog = List.turnIntoCSList([geo.homog.value[0], CSNumber.mult(value, geo.homog.value[2]), geo.homog.value[2]]);
+                geo.homog = List.turnIntoCSList([
+                    geo.homog.value[0],
+                    CSNumber.mult(value, geo.homog.value[2]),
+                    geo.homog.value[2],
+                ]);
             }
         }
     }
@@ -326,7 +347,7 @@ Accessor.setField = function(geo, field, value) {
         }
     }
 
-    if (field === "narrow" && ["P", "C"].includes(geo.kind)) {
+    if (field === "narrow" && ["P", "C"].indexOf(geo.kind) !== -1) {
         if (value.ctype === "boolean") geo.narrow = value.value;
         if (value.ctype === "number" && CSNumber._helper.isAlmostReal(value)) geo.narrow = value.value.real;
     }
@@ -335,11 +356,9 @@ Accessor.setField = function(geo, field, value) {
     if (typeof setter === "function") {
         return setter(geo, value);
     }
-
-
 };
 
-Accessor.getuserData = function(obj, key) {
+Accessor.getuserData = function (obj, key) {
     var val;
     if (key.ctype === "string" && obj.userData && obj.userData[key.value]) val = obj.userData[key.value];
 
@@ -352,10 +371,12 @@ Accessor.getuserData = function(obj, key) {
     }
 };
 
-Accessor.setuserData = function(obj, key, value) {
+Accessor.setuserData = function (obj, key, value) {
     if (!(key && key.ctype === "string" && obj && value)) {
         return;
     }
     if (!obj.userData) obj.userData = {};
     obj.userData[key.value] = value;
 };
+
+export { Accessor };

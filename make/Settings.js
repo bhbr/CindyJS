@@ -12,14 +12,13 @@ var Q = require("q");
 var prevSettingsFile = "build/prev-settings.json";
 
 module.exports = function Settings() {
-
     var configSettings = {
         build: "release",
-        closure_urlbase: "http://dl.google.com/closure-compiler",
+        closure_urlbase: "https://repo1.maven.org/maven2/com/google/javascript/closure-compiler",
         closure_language_in: "ECMASCRIPT6_STRICT",
         closure_language_out: "ECMASCRIPT5_STRICT",
         closure_level: "SIMPLE",
-        closure_version: "20180506",
+        closure_version: "v20210202",
         verbose: "true",
         logprefix: "true",
         c3d_closure_level: "ADVANCED",
@@ -37,38 +36,36 @@ module.exports = function Settings() {
 
     var perTaskSettings = {};
 
-    this.get = function(key) {
+    this.get = function (key) {
         return configSettings[key];
     };
 
-    this.set = function(key, val) {
+    this.set = function (key, val) {
         configSettings[key] = val;
     };
 
-    this.prevSetting = function(taskName, key) {
+    this.prevSetting = function (taskName, key) {
         var task = perTaskSettings[taskName];
         return task ? task[key] : undefined;
     };
 
-    this.store = function() {
+    this.store = function () {
         var json = JSON.stringify(perTaskSettings);
         // Can't use qfs: https://github.com/kriskowal/q-io/issues/149
         //return qfs.write(prevSettingsFile, json);
         return Q.nfcall(fs.writeFile, prevSettingsFile, json);
     };
 
-    this.load = function() {
+    this.load = function () {
         var json = fs.readFileSync(prevSettingsFile, "utf-8");
         perTaskSettings = JSON.parse(json) || {};
     };
 
-    this.remember = function(taskName, values) {
-        if (Object.keys(values).length !== 0)
-            perTaskSettings[taskName] = values;
+    this.remember = function (taskName, values) {
+        if (Object.keys(values).length !== 0) perTaskSettings[taskName] = values;
     };
 
-    this.forget = function(taskName) {
+    this.forget = function (taskName) {
         delete perTaskSettings[taskName];
     };
-
 };

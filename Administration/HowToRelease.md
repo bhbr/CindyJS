@@ -7,9 +7,9 @@ outlining the process used to create new CindyJS releases.
 
 Go to the [GitHub list of CindyJS releases][releases].
 Next to the date of each release there is a link titled
-“… commits to master since this release”.
+“… commits to main since this release”.
 Follow that to obtain a listing of all the changes this release will contain.
-If the release is not based on master, but on some other branch,
+If the release is not based on main, but on some other branch,
 edit the URL to name the branch from which you will be creating the release.
 
 Make sure you have a reasonably good understanding about what these
@@ -31,7 +31,7 @@ and a breaking change to `0.(x+1).0` or `1.0.0` one day.
 
 If you are tempted to create a prerelease (beta or similar), consider whether
 the [snapshot deployments](https://cindyjs.org/dist/snapshot/) of the
-CindyJS master might be a more suitable solution for the purpose of testing.
+CindyJS main might be a more suitable solution for the purpose of testing.
 If you decide on a prerelease, make sure to read semantic versioning
 guidelines about how to name these, and also decide how to deploy it,
 since the automatic deployment is intended for releases and will not
@@ -54,31 +54,31 @@ CindyJS 2.1.0
 
 Breaking changes:
 
-* Changed unit of time from microfortnights to centiseconds (#666)
-  (This section should only be needed for MAJOR version changes!)
+-   Changed unit of time from microfortnights to centiseconds (#666)
+    (This section should only be needed for MAJOR version changes!)
 
 Features:
 
-* Added some new feature (#123)
-* Implemented another required thing, consisting of several subcomponents
-  so that describing all of them requires more than one line (#345)
+-   Added some new feature (#123)
+-   Implemented another required thing, consisting of several subcomponents
+    so that describing all of them requires more than one line (#345)
 
 Cinderella compatibility:
 
-* Support foobars (#444)
-* Added function baz(‹list›) (#531)
+-   Support foobars (#444)
+-   Added function baz(‹list›) (#531)
 
 Improvements:
 
-* Increased frobenication performance (#432)
+-   Increased frobenication performance (#432)
 
 Bug fixes:
 
-* Avoided bit overflow in fubb (#111, #112)
+-   Avoided bit overflow in fubb (#111, #112)
 
 Other:
 
-* Revised some examples (#543)
+-   Revised some examples (#543)
 ```
 
 The first line should give the project name and version number,
@@ -119,11 +119,11 @@ Features should also be ported into older major version branches
 unless they cause incompatibilities.
 For a major version bump (like from `1.17.0` to `2.0.0`)
 this can be done by creating a new branch `v1` from the current
-`master` and then reverting all the incompatible changes
+`main` and then reverting all the incompatible changes
 using [`git revert`][git-revert]:
 
 ```sh
-git checkout master
+git checkout main
 git checkout -b v1
 git revert --mainline 1 123abc 234cde 345def # three breaking changes
 ```
@@ -135,13 +135,13 @@ See [v0.7.4](https://github.com/CindyJS/CindyJS/commits/v0.7.4)
 for a real life example of a version created by reverting breaking changes.
 
 For a minor version bump (like from `2.0.0` to `2.1.0`),
-one can merge `master` into `v1` since the minor bump should not
+one can merge `main` into `v1` since the minor bump should not
 create any new incompatibilities.
 The merge may cause conflicts that require manual resolution, though.
 
 ```sh
 git checkout v1
-git merge master -m "Merge tag 'v2.1.0' into v1"
+git merge main -m "Merge tag 'v2.1.0' into v1"
 ```
 
 This commit message is a bit cheated, since the tag doesn't exist at this point.
@@ -199,11 +199,11 @@ resolutions for these, so that you only have to resolve them once.
 ## Tagging the version
 
 Now that all the backporting tags are in place, it is time to actually tag
-the most recent release from the `master` branch.
+the most recent release from the `main` branch.
 So type the following commands:
 
 ```sh
-git checkout master
+git checkout main
 git tag --sign v2.1.0
 ```
 
@@ -216,7 +216,7 @@ replace the `--sign` (abbreviated `-s`) with `--annotate` (abbreviated `-a`).
 ## Pushing the tags
 
 After the release has been tagged, that tag needs to be pushed to GitHub.
-Assuming that `origin` is your name for the [`CindyJS/CindyJS`][CJS] repository,
+Assuming that `origin` is your name for the [`CindyJS/CindyJS`][cjs] repository,
 you push the tag for release v2.1.0 using
 
 ```sh
@@ -224,11 +224,11 @@ git push origin tag v2.1.0
 ```
 
 But if you backported some features and bug fixes, there might be a lot more
-to push.  You can name all the tags and branches to push individually,
+to push. You can name all the tags and branches to push individually,
 or just name the branches and include all annotated tags on these like this:
 
 ```sh
-git push --follow-tags origin master v1 v1.16 v1.15
+git push --follow-tags origin main v1 v1.16 v1.15
 ```
 
 A push that includes version tags triggers the deployment process,
@@ -237,7 +237,7 @@ by building the files for deployment and pushing them to the cindyjs.org server.
 Look at [the Travis build status][travis-builds]
 to see this progressing (and to investigate any problems that might occur).
 
-[CJS]: https://github.com/CindyJS/CindyJS
+[cjs]: https://github.com/CindyJS/CindyJS
 [travis-builds]: https://travis-ci.org/CindyJS/CindyJS/builds
 
 ## Editing the release notes
@@ -281,16 +281,16 @@ than the corresponding plain text notation.
 
 Consider whether the website should be updated.
 
-* Has the documentation been modified?
-  You can check this using a command like `git diff --stat v2.0.0..v2.1.0 ref`
-  or – more verbosely – `git log v2.0.0..v2.1.0 ref`.
+-   Has the documentation been modified?
+    You can check this using a command like `git diff --stat v2.0.0..v2.1.0 ref`
+    or – more verbosely – `git log v2.0.0..v2.1.0 ref`.
 
-* Are there any new or improved examples?
-  Just substitute `examples` instead of `ref` in the above commands.
+-   Are there any new or improved examples?
+    Just substitute `examples` instead of `ref` in the above commands.
 
-* Do any of the existing examples benefit from some bug fix?
-  This requires a bit of knowledge about what examples we have,
-  and what functionality they use.
+-   Do any of the existing examples benefit from some bug fix?
+    This requires a bit of knowledge about what examples we have,
+    and what functionality they use.
 
 If the answer to any of these questions is “yes”,
 then the website should be updated.
@@ -298,7 +298,7 @@ Go to your checkout of [the website repository][website]
 and perform the following steps:
 
 ```sh
-git checkout master
+git checkout main
 git pull
 git checkout -b bump2.1.0
 git submodule update --init CindyJS  # just in case
